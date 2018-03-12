@@ -1,11 +1,13 @@
 {
   "name": "bl-backend",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start:watch": "nodemon server.js"
+    "start:watch": "nodemon server.js",
+    "drop-tables": "node load-db/drop-tables.js",
+    "create-tables": "node load-db/create-tables.js",
+    "seed-data": "node load-db/seed-data.js"
   },
   "repository": {
     "type": "git",
@@ -26,5 +28,6 @@
   },
   "devDependencies": {
     "nodemon": "^1.17.1"
-  }
+  },
+  "description": ""
 }
