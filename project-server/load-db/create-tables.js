@@ -1,15 +1,15 @@
-'use strict'
+'use strict';
 
 const client = require('../db-client');
 
 client.query(`
-    CREATE TABLE IF NOT EXIST books (
+    CREATE TABLE IF NOT EXISTS books (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         author TEXT NOT NULL,
         isbn CHAR(21),
-        image_url VARCHAR(max),
-        description VARCHAR(max)
+        image_url VARCHAR,
+        description VARCHAR
     )
 `)
     .then(
