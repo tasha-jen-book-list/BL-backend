@@ -7,7 +7,8 @@
     "start:watch": "nodemon server.js",
     "drop-tables": "node load-db/drop-tables.js",
     "create-tables": "node load-db/create-tables.js",
-    "seed-data": "node load-db/seed-data.js"
+    "seed-data": "node load-db/seed-data.js",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -29,5 +30,5 @@
   "devDependencies": {
     "nodemon": "^1.17.1"
   },
-  "description": ""
+  "description": "Booklist"
 }
