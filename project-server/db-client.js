@@ -11,5 +11,5 @@ client.connect();
 client.on('error', err => {
     console.error(err);
 });
-
+console.log('I run');
 module.exports = client;
