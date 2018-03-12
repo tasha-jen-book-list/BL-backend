@@ -1,0 +1,30 @@
+{
+  "name": "bl-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:watch": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tasha-jen-book-list/BL-backend.git"
+  },
+  "author": "Jen Lipton",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tasha-jen-book-list/BL-backend/issues"
+  },
+  "homepage": "https://github.com/tasha-jen-book-list/BL-backend#readme",
+  "dependencies": {
+    "cors": "^2.8.4",
+    "dotenv": "^5.0.1",
+    "express": "^4.16.3",
+    "morgan": "^1.9.0",
+    "pg": "^7.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^1.17.1"
+  }
+}
