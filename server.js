@@ -33,7 +33,7 @@ app.get('/books/:id', (request, response) => {
     
     client.query(`
         SELECT id, title, author, isbn, image_url, description 
-        FROM books;
+        FROM books
         WHERE id=$1;
     `,
     [id]
