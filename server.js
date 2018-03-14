@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: true}));
 
 const client = require('./db-client');
 
-app.put('/books/:id', (request, response) => {
+app.put(`/books/:id`, (request, response) => {
     const body = request.body;
     client.query(`
         UPDATE books
