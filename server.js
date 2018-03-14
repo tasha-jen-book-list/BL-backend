@@ -25,12 +25,12 @@ app.put('/books/:id', (request, response) => {
         RETURNING id, title, author, isbn, image_url, description; 
     `, 
     [
-        body.id,
         body.title,
         body.author,
         body.isbn,
         body.image_url,
-        body.description
+        body.description,
+        body.id
     ])
         .then(result => {
             response.send(result.rows[0]);
