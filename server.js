@@ -16,6 +16,50 @@ app.use(express.urlencoded({ extended: true}));
 
 const client = require('./db-client');
 
+app.put('/books/:id', (request, response) => {
+    const body = request.body;
+    client.query(`
+        UPDATE books
+        SET title=$1, author=$2, isbn=$3, image_url=$4, description=$5
+        WHERE id=$6
+        RETURNING id, title, author, isbn, image_url, description; 
+    `, 
+    [
+        body.id,
+        body.title,
+        body.author,
+        body.isbn,
+        body.image_url,
+        body.description
+    ])
+        .then(result => {
+            response.send(result.rows[0]);
+        })
+        .catch(err => {
+            console.error(err);
+            response.sendStatus(500);
+        });
+
+});
+
+app.delete(`/books/:id`, (request, response) => {
+    const id = request.params.id;
+
+    client.query(`
+        DELETE FROM books
+        WHERE id=$1;
+    `, 
+    [id])
+        .then(result => {
+            response.send({removed: result.rowCount !== 0});
+        })
+        .catch(err => {
+            console.error(err);
+            response.sendStatus(500);
+        });
+})
+
+
 app.get('/books', (request, response) => {
     client.query(`
     SELECT id, title, author, isbn, image_url, description 
