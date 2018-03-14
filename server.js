@@ -67,7 +67,7 @@ app.get('/books', (request, response) => {
     `)
         .then(result => response.send(result.rows))
         .catch(err => {
-            console.error(err);
+            console.error(err); 
             response.sendStatus(500);
         });
 });
@@ -77,7 +77,7 @@ app.get('/books/:id', (request, response) => {
     
     client.query(`
         SELECT id, title, author, isbn, image_url, description 
-        FROM books;
+        FROM books
         WHERE id=$1;
     `,
     [id]
@@ -91,6 +91,30 @@ app.get('/books/:id', (request, response) => {
             response.sendStatus(500);
         });
 });
+
+app.post('/books', (request, response) => {
+    const body = request.body;
+
+    client.query(`
+        INSERT INTO books (title, author, isbn, image_url, description)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, title, author, isbn, image_url, description;
+    `,
+    [
+        body.title,
+        body.author,
+        body.isbn,
+        body.image_url,
+        body.description
+    ]
+    )
+        .then(result => response.send(result.rows[0]))
+        .catch(err => {
+            console.log(err);
+            response.sendStatus(500);
+        });
+});
+
 
 app.listen(PORT,() => {
     console.log('server running on port', PORT);
