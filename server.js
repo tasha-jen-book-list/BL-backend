@@ -72,6 +72,26 @@ app.get('/books', (request, response) => {
         });
 });
 
+app.get('/books/:id', (request, response) => {
+    const id = request.params.id;
+    
+    client.query(`
+        SELECT id, title, author, isbn, image_url, description 
+        FROM books;
+        WHERE id=$1;
+    `,
+    [id]
+    )
+        .then(result => {
+            if(result.rows.length === 0) response.sendStatus(404);
+            else response.send(result.rows[0]);
+        })
+        .catch(err => {
+            console.log(err);
+            response.sendStatus(500);
+        });
+});
+
 app.listen(PORT,() => {
     console.log('server running on port', PORT);
 });
