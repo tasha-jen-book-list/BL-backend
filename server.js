@@ -23,7 +23,7 @@ app.get('/books', (request, response) => {
     `)
         .then(result => response.send(result.rows))
         .catch(err => {
-            console.error(err); 
+            console.error(err);
             response.sendStatus(500);
         });
 });
