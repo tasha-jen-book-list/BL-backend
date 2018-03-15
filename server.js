@@ -159,7 +159,7 @@ app.put('/api/v1/books/import/:isbn', (request, response, next) => {
         .query({
             i: isbn,
             apikey: GOOGLE_API_KEY
-            })
+        })
         .then(res => {
             const body = res.body;
             return client.query(`
@@ -174,9 +174,10 @@ app.put('/api/v1/books/import/:isbn', (request, response, next) => {
                 body.image_url,
                 body.description
             ]
-        )
-            .then(result => response.send(result.rows[0]))
-            .catch(next);
+            )
+                .then(result => response.send(result.rows[0]))
+                .catch(next);
+        });
 });
 
 // eslint-disable-next-line
