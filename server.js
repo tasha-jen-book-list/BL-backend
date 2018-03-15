@@ -1,7 +1,6 @@
 'use strict';
 
 const env = require('dotenv').config();
-const DATABASE_URL = process.env.DATABASE_URL;
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSPHRASE = process.env.ADMIN_PASSPHRASE;
 const GOOGLE_API_URL = process.env.GOOGLE_API_URL;
