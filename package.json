@@ -25,7 +25,8 @@
     "dotenv": "^5.0.1",
     "express": "^4.16.3",
     "morgan": "^1.9.0",
-    "pg": "^7.4.1"
+    "pg": "^7.4.1",
+    "superagent": "^3.8.2"
   },
   "devDependencies": {
     "nodemon": "^1.17.1"
