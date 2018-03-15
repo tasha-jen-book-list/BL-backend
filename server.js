@@ -35,7 +35,7 @@ app.get('/admin', (request, response) => {
     });
 });
 
-app.put('/books/:id', (request, response, next) => {
+app.put(`/books/:id`, (request, response, next) => {
     const body = request.body;
     
     client.query(`
