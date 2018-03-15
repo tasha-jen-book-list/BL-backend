@@ -121,7 +121,7 @@ app.post('/books', (request, response, next) => {
         .catch(next);
 });
 
-app.get('/search', (request, response, next) => {
+app.get('/api/v1/books/find', (request, response, next) => {
 
     const search = request.query.search;
 
@@ -152,31 +152,31 @@ app.get('/search', (request, response, next) => {
         .catch(next);
 });
 
-app.put('/books/search/:id', (request, response, next) => {
-    const id = request.params.id;
+app.put('/api/v1/books/import/:isbn', (request, response, next) => {
+    const isbn = request.params.isbn;
 
     sa.get(GOOGLE_API_URL)
         .query({
-            i: id,
+            i: isbn,
             apikey: GOOGLE_API_KEY
-        })
+            })
         .then(res => {
             const body = res.body;
             return client.query(`
-            INSERT INTO books (title, author, isbn, image_url, description)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, title, author, isbn, image_url, description;
-        `,
-        [
-            body.title,
-            body.author,
-            body.isbn,
-            body.image_url,
-            body.description
-        ]
+                INSERT INTO books (title, author, isbn, image_url, description)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, title, author, isbn, image_url, description;
+            `,
+            [
+                body.title,
+                body.author,
+                body.isbn,
+                body.image_url,
+                body.description
+            ]
         )
             .then(result => response.send(result.rows[0]))
-        .catch(next);
+            .catch(next);
 });
 
 // eslint-disable-next-line
