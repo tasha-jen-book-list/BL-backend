@@ -4,11 +4,14 @@ const env = require('dotenv').config();
 const DATABASE_URL = process.env.DATABASE_URL;
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSPHRASE = process.env.ADMIN_PASSPHRASE;
+const GOOGLE_API_URL = process.env.GOOGLE_API_URL;
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const app = express();
+const sa = require('superagent');
 
 app.use(morgan('dev'));
 app.use(cors());
@@ -58,7 +61,7 @@ app.put(`/books/:id`, (request, response, next) => {
         .catch(next);
 });
 
-app.delete(`/books/:id`, (request, response, next) => {
+app.delete('/books/:id', (request, response, next) => {
     const id = request.params.id;
 
     client.query(`
@@ -116,6 +119,64 @@ app.post('/books', (request, response, next) => {
     ]
     )
         .then(result => response.send(result.rows[0]))
+        .catch(next);
+});
+
+app.get('/search', (request, response, next) => {
+
+    const search = request.query.search;
+
+    if (!search) {
+        return next({status: 400, message: 'search query not provided'});
+    }
+
+    sa.get(GOOGLE_API_URL)
+        .query({s: search.trim(),
+            apikey: GOOGLE_API_KEY})
+        .then(response => {
+            const body = response.body;
+            const formatted = {
+
+                total: body.totalResults,
+                books: body.Search.map(book => {
+                    return {
+                        title: book.Title,
+                        author: book.Author,
+                        isbn: book.isbn,
+                        image_url: book.image_url,
+                        description: book.description
+                    };
+                })
+            };
+            response.send(formatted);
+        })
+        .catch(next);
+});
+
+app.put('/books/search/:id', (request, response, next) => {
+    const id = request.params.id;
+
+    sa.get(GOOGLE_API_URL)
+        .query({
+            i: id,
+            apikey: GOOGLE_API_KEY
+        })
+        .then(res => {
+            const body = res.body;
+            return client.query(`
+            INSERT INTO books (title, author, isbn, image_url, description)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, title, author, isbn, image_url, description;
+        `,
+        [
+            body.title,
+            body.author,
+            body.isbn,
+            body.image_url,
+            body.description
+        ]
+        )
+            .then(result => response.send(result.rows[0]))
         .catch(next);
 });
 
