@@ -36,6 +36,8 @@ app.get('/admin', (request, response) => {
 });
 
 app.put('/books/:id', (request, response, next) => {
+    const body = request.body;
+    
     client.query(`
         UPDATE books
         SET title=$1, author=$2, isbn=$3, image_url=$4, description=$5
@@ -43,18 +45,17 @@ app.put('/books/:id', (request, response, next) => {
         RETURNING title, author, isbn, image_url, description, id;
     `,
     [
-        request.body.title,
-        request.body.author,
-        request.body.isbn,
-        request.body.image_url,
-        request.body.description,
-        request.body.id
+        body.title,
+        body.author,
+        body.isbn,
+        body.image_url,
+        body.description,
+        request.params.id
     ])
         .then(result => {
             response.send(result.rows[0]);
         })
         .catch(next);
-
 });
 
 app.delete('/books/:id', (request, response, next) => {
