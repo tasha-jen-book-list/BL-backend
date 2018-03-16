@@ -19,15 +19,14 @@ app.use(express.urlencoded({ extended: true}));
 
 const client = require('./db-client');
 
+// ***Admin authorization*** 
 function ensureAdmin(request, response, next) {
-    // got token?
+
     const token = request.get('token') || request.query.token;
     if(!token) next({ status: 401, message: 'No token found' });
 
-    // right token?
     else if(token !== ADMIN_PASSPHRASE) next({ status: 403, message: 'Unauthorized' });
     
-    // you can pass
     else next();
 }
 
@@ -37,6 +36,8 @@ app.get('/admin', (request, response) => {
     });
 });
 
+
+// Update to previously exsisting books on the book list
 app.put(`/books/:id`, (request, response, next) => {
     const body = request.body;
     
@@ -60,6 +61,7 @@ app.put(`/books/:id`, (request, response, next) => {
         .catch(next);
 });
 
+// Deletion of previously exsisting books on the book list
 app.delete('/books/:id', (request, response, next) => {
     const id = request.params.id;
 
@@ -74,7 +76,7 @@ app.delete('/books/:id', (request, response, next) => {
         .catch(next);
 });
 
-
+// Getting books for the book list from the database
 app.get('/books', (request, response, next) => {
     client.query(`
     SELECT id, title, author, isbn, image_url, description 
@@ -101,6 +103,8 @@ app.get('/books/:id', (request, response, next) => {
         .catch(next);
 });
 
+
+// Sending information to the view from the database
 app.post('/books', (request, response, next) => {
     const body = request.body;
 
@@ -121,17 +125,20 @@ app.post('/books', (request, response, next) => {
         .catch(next);
 });
 
+
+
+
+// ****API search for books****
 app.get('/api/v1/books/find', (request, response, next) => {
 
     const search = request.query.search;
-
-    if (!search) {
-        return next({status: 400, message: 'search query not provided'});
-    }
+    if (!search) {return next({status: 400, message: 'search query not provided'});}
 
     sa.get(GOOGLE_API_URL)
-        .query({s: search.trim(),
-            apikey: GOOGLE_API_KEY})
+        .query({
+            s: search.trim(),
+            apikey: GOOGLE_API_KEY
+        })
         .then(response => {
             const body = response.body;
             const formatted = {
