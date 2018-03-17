@@ -131,26 +131,27 @@ app.post('/books', (request, response, next) => {
 // ****API search for books****
 app.get('/volumes/find', (request, response, next) => {
 
-    const search = request.query.search;
+    const search = request.query.q;
     if (!search) {return next({status: 400, message: 'search query not provided'});}
 
     sa.get(GOOGLE_API_URL)
         .query({
             q: search.trim(),
         })
-        .then(response => {
-            const body = response.body;
+        .then(res => {
+            const array = res.body.items;
             const formatted = {
 
-                total: body.totalResults,
-                books: body.Search.map(book => {
+                total: array.length,
+                books: array.map(book => {
                     return {
+                        id: book.id,
                         title: book.volumeInfo.title,
                         //authors returns an array
                         author: book.volumeInfo.authors,
-                        isbn: `ISBN ${book.industryIdentifiers[0].identifier}`,
-                        image_url: book.imageLinks.small,
-                        description: book.description
+                        isbn: `ISBN_10 ${book.volumeInfo.industryIdentifiers[0].identifier}`,
+                        image_url: book.volumeInfo.imageLinks.thumbnail,
+                        description: book.volumeInfo.description
                     };
                 })
             };
@@ -159,13 +160,12 @@ app.get('/volumes/find', (request, response, next) => {
         .catch(next);
 });
 
-app.put('/api/v1/books/import/:id', (request, response, next) => {
+app.put('/volumes/import/:id', (request, response, next) => {
     const id = request.params.id;
 
     sa.get(GOOGLE_API_URL)
         .query({
-            i: isbn,
-            apikey: GOOGLE_API_KEY
+            q: id.trim()
         })
         .then(res => {
             const body = res.body;
