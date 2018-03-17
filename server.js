@@ -160,7 +160,7 @@ app.get('/volumes/find', (request, response, next) => {
         .catch(next);
 });
 
-app.put('/volumes/import/:id', (request, response, next) => {
+app.put('/books/volumes/:id', (request, response, next) => {
     const id = request.params.id;
 
     sa.get(GOOGLE_API_URL)
@@ -168,18 +168,18 @@ app.put('/volumes/import/:id', (request, response, next) => {
             q: id.trim()
         })
         .then(res => {
-            const body = res.body;
+            const array = res.body.items;
             return client.query(`
                 INSERT INTO books (title, author, isbn, image_url, description)
                 VALUES ($1, $2, $3, $4, $5)
                 RETURNING id, title, author, isbn, image_url, description;
             `,
             [
-                body.title,
-                body.author,
-                body.isbn,
-                body.image_url,
-                body.description
+                array.volumeInfo.title,
+                array.volumeInfo.authors,
+                `ISBN_10 ${array.volumeInfo.industryIdentifiers[0].identifier}`,
+                array.volumeInfo.imageLinks.thumbnail,
+                array.volumeInfo.description
             ]
             )
                 .then(result => response.send(result.rows[0]))
