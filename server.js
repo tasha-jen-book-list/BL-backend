@@ -1,14 +1,16 @@
 'use strict';
 
 const env = require('dotenv').config();
-const DATABASE_URL = process.env.DATABASE_URL;
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSPHRASE = process.env.ADMIN_PASSPHRASE;
+const GOOGLE_API_URL = process.env.GOOGLE_API_URL;
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const app = express();
+const sa = require('superagent');
 
 app.use(morgan('dev'));
 app.use(cors());
@@ -17,15 +19,14 @@ app.use(express.urlencoded({ extended: true}));
 
 const client = require('./db-client');
 
+// ***Admin authorization*** 
 function ensureAdmin(request, response, next) {
-    // got token?
+
     const token = request.get('token') || request.query.token;
     if(!token) next({ status: 401, message: 'No token found' });
 
-    // right token?
     else if(token !== ADMIN_PASSPHRASE) next({ status: 403, message: 'Unauthorized' });
     
-    // you can pass
     else next();
 }
 
@@ -35,7 +36,9 @@ app.get('/admin', (request, response) => {
     });
 });
 
-app.put('/books/:id', (request, response, next) => {
+
+// Update to previously exsisting books on the book list
+app.put(`/books/:id`, (request, response, next) => {
     const body = request.body;
     
     client.query(`
@@ -58,7 +61,8 @@ app.put('/books/:id', (request, response, next) => {
         .catch(next);
 });
 
-app.delete(`/books/:id`, (request, response, next) => {
+// Deletion of previously exsisting books on the book list
+app.delete('/books/:id', (request, response, next) => {
     const id = request.params.id;
 
     client.query(`
@@ -72,7 +76,7 @@ app.delete(`/books/:id`, (request, response, next) => {
         .catch(next);
 });
 
-
+// Getting books for the book list from the database
 app.get('/books', (request, response, next) => {
     client.query(`
     SELECT id, title, author, isbn, image_url, description 
@@ -99,6 +103,8 @@ app.get('/books/:id', (request, response, next) => {
         .catch(next);
 });
 
+
+// Sending information to the view from the database
 app.post('/books', (request, response, next) => {
     const body = request.body;
 
@@ -117,6 +123,73 @@ app.post('/books', (request, response, next) => {
     )
         .then(result => response.send(result.rows[0]))
         .catch(next);
+});
+
+
+
+
+// ****API search for books****
+app.get('/volumes/find', (request, response, next) => {
+
+    const search = request.query.q;
+    if (!search) {return next({status: 400, message: 'search query not provided'});}
+
+    sa.get(GOOGLE_API_URL)
+        .query({
+            q: search.trim(),
+        })
+        .then(res => {
+            const array = res.body.items;
+            const formatted = {
+
+                total: array.length,
+                books: array.map(book => {
+                    return {
+                        id: book.id,
+                        title: book.volumeInfo.title,
+                        //authors returns an array
+                        author: book.volumeInfo.authors,
+                        isbn: `ISBN_10 ${book.volumeInfo.industryIdentifiers[0].identifier}`,
+                        image_url: book.volumeInfo.imageLinks.thumbnail,
+                        description: book.volumeInfo.description
+                    };
+                })
+            };
+            response.send(formatted);
+        })
+        .catch(next);
+});
+
+app.put('/books/volumes/:id', (request, response, next) => {
+    const id = request.params.id;
+
+    sa.get(GOOGLE_API_URL)
+        .query({
+            id: `/${id}`
+        })
+        .then(response => {
+            const array = response.body;
+            return client.query(`
+                INSERT INTO books (title, author, isbn, image_url, description)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, title, author, isbn, image_url, description;
+            `,
+            [
+                array.volumeInfo.title,
+                array.volumeInfo.authors[0],
+                array.volumeInfo.industryIdentifiers.ISBN_10,
+                array.volumeInfo.thumbnail,
+                array.volumeInfo.description
+            ]
+            )
+                .then(result => response.send(result.rows[0]))
+                .catch(next);
+        });
+});
+
+app.get('*', (request, response) => {
+    response.redirect(CLIENT_URL);
+
 });
 
 // eslint-disable-next-line
