@@ -165,10 +165,10 @@ app.put('/books/volumes/:id', (request, response, next) => {
 
     sa.get(GOOGLE_API_URL)
         .query({
-            q: id.trim()
+            id: `/${id}`
         })
-        .then(res => {
-            const array = res.body.items;
+        .then(response => {
+            const array = response.body;
             return client.query(`
                 INSERT INTO books (title, author, isbn, image_url, description)
                 VALUES ($1, $2, $3, $4, $5)
@@ -176,15 +176,20 @@ app.put('/books/volumes/:id', (request, response, next) => {
             `,
             [
                 array.volumeInfo.title,
-                array.volumeInfo.authors,
-                `ISBN_10 ${array.volumeInfo.industryIdentifiers[0].identifier}`,
-                array.volumeInfo.imageLinks.thumbnail,
+                array.volumeInfo.authors[0],
+                array.volumeInfo.industryIdentifiers.ISBN_10,
+                array.volumeInfo.thumbnail,
                 array.volumeInfo.description
             ]
             )
                 .then(result => response.send(result.rows[0]))
                 .catch(next);
         });
+});
+
+app.get('*', (request, response) => {
+    response.redirect(CLIENT_URL);
+
 });
 
 // eslint-disable-next-line
