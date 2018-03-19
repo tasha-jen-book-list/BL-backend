@@ -1,34 +1,94 @@
 'use strict';
 
-const env = require('dotenv').config();
-const DATABASE_URL = process.env.DATABASE_URL;
+const dotenv = require('dotenv');
+dotenv.config();
+
 const PORT = process.env.PORT || 3000;
+const ADMIN_PASSPHRASE = process.env.ADMIN_PASSPHRASE;
+const GOOGLE_API_URL = process.env.GOOGLE_API_URL;
 
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
+const sa = require('superagent');
+
 const app = express();
 
 app.use(morgan('dev'));
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 const client = require('./db-client');
 
-app.get('/books', (request, response) => {
+// ***Admin authorization*** 
+function ensureAdmin(request, response, next) {
+
+    const token = request.get('token') || request.query.token;
+    if(!token) next({ status: 401, message: 'No token found' });
+
+    else if(token !== ADMIN_PASSPHRASE) next({ status: 403, message: 'Unauthorized' });
+    
+    else next();
+}
+
+app.get('/admin', (request, response) => {
+    ensureAdmin(request, response, err => {
+        response.send({ admin: !err });
+    });
+});
+
+
+// Update to previously exsisting books on the book list
+app.put(`/books/:id`, (request, response, next) => {
+    const body = request.body;
+    
+    client.query(`
+        UPDATE books
+        SET title=$1, author=$2, isbn=$3, image_url=$4, description=$5
+        WHERE id=$6
+        RETURNING title, author, isbn, image_url, description, id;
+    `,
+    [
+        body.title,
+        body.author,
+        body.isbn,
+        body.image_url,
+        body.description,
+        request.params.id
+    ])
+        .then(result => {
+            response.send(result.rows[0]);
+        })
+        .catch(next);
+});
+
+// Deletion of previously exsisting books on the book list
+app.delete('/books/:id', (request, response, next) => {
+    const id = request.params.id;
+
+    client.query(`
+        DELETE FROM books
+        WHERE id=$1;
+    `,
+    [id])
+        .then(result => {
+            response.send({removed: result.rowCount !== 0});
+        })
+        .catch(next);
+});
+
+// Getting books for the book list from the database
+app.get('/books', (request, response, next) => {
     client.query(`
     SELECT id, title, author, isbn, image_url, description 
     FROM books;
     `)
         .then(result => response.send(result.rows))
-        .catch(err => {
-            console.error(err); 
-            response.sendStatus(500);
-        });
+        .catch(next);
 });
 
-app.get('/books/:id', (request, response) => {
+app.get('/books/:id', (request, response, next) => {
     const id = request.params.id;
     
     client.query(`
@@ -42,13 +102,12 @@ app.get('/books/:id', (request, response) => {
             if(result.rows.length === 0) response.sendStatus(404);
             else response.send(result.rows[0]);
         })
-        .catch(err => {
-            console.log(err);
-            response.sendStatus(500);
-        });
+        .catch(next);
 });
 
-app.post('/books', (request, response) => {
+
+// Sending information to the view from the database
+app.post('/books', (request, response, next) => {
     const body = request.body;
 
     client.query(`
@@ -65,10 +124,84 @@ app.post('/books', (request, response) => {
     ]
     )
         .then(result => response.send(result.rows[0]))
-        .catch(err => {
-            console.log(err);
-            response.sendStatus(500);
+        .catch(next);
+});
+
+// ****API search for books****
+app.get('/volumes/find', (request, response, next) => {
+
+    const search = request.query.q;
+    if (!search) {return next({status: 400, message: 'search query not provided'});}
+
+    sa.get(GOOGLE_API_URL)
+        .query({
+            q: search.trimLeft().trimRight().replace(/\s/g, '+'),
+        })
+        .then(res => {
+            const array = res.body.items;
+            const formatted = {
+
+                total: array.length,
+                books: array.map(book => {
+                    if (!book.volumeInfo.industryIdentifiers) return null;
+                    if (!book.volumeInfo.imageLinks) return null;
+                    
+                    return {
+                        title: book.volumeInfo.title,
+                        author: book.volumeInfo.authors, //returns an array
+                        isbn: `ISBN_13 ${book.volumeInfo.industryIdentifiers[0].identifier}`,
+                        image_url: book.volumeInfo.imageLinks.thumbnail,
+                        description: book.volumeInfo.description
+                    };
+                })
+            };
+            response.send(formatted);
+        })
+        .catch(next);
+});
+
+app.put('/books/volumes/:isbn', (request, response, next) => {
+    const isbn = request.params.isbn;
+
+    sa.get(GOOGLE_API_URL)
+        .query({
+            q: `isbn:${isbn}`
+        })
+        .then(res => {
+            const book = res.body.items[0].volumeInfo;
+            return client.query(`
+                INSERT INTO books (title, author, isbn, image_url, description)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, title, author, isbn, image_url, description;
+            `,
+            [
+                book.title,
+                book.authors, //returns an array
+                `ISBN_13 ${book.industryIdentifiers[0].identifier}`,
+                book.imageLinks.thumbnail,
+                book.description
+            ]
+            )
+                .then(result => response.send(result.rows[0]))
+                .catch(next);
         });
+});
+
+// app.get('*', (request, response) => {
+//     response.redirect(CLIENT_URL);
+
+// });
+
+// eslint-disable-next-line
+app.use((err, request, response, next) => {
+    console.error(err);
+
+    if(err.status) {
+        response.status(err.status).send({ error: err.message });
+    }
+    else {
+        response.sendStatus(500);
+    }
 });
 
 
