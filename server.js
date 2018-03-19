@@ -5,7 +5,6 @@ dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSPHRASE = process.env.ADMIN_PASSPHRASE;
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const GOOGLE_API_URL = process.env.GOOGLE_API_URL;
 
 const express = require('express');
@@ -136,7 +135,7 @@ app.get('/volumes/find', (request, response, next) => {
 
     sa.get(GOOGLE_API_URL)
         .query({
-            q: search.trim(),
+            q: search.trimLeft().trimRight().replace(/\s/g, '+'),
         })
         .then(res => {
             const array = res.body.items;
@@ -144,10 +143,13 @@ app.get('/volumes/find', (request, response, next) => {
 
                 total: array.length,
                 books: array.map(book => {
+                    if (!book.volumeInfo.industryIdentifiers) return null;
+                    if (!book.volumeInfo.imageLinks) return null;
+                    
                     return {
                         title: book.volumeInfo.title,
                         author: book.volumeInfo.authors, //returns an array
-                        isbn: `ISBN_10 ${book.volumeInfo.industryIdentifiers[0].identifier}`,
+                        isbn: `ISBN_13 ${book.volumeInfo.industryIdentifiers[0].identifier}`,
                         image_url: book.volumeInfo.imageLinks.thumbnail,
                         description: book.volumeInfo.description
                     };
@@ -167,7 +169,6 @@ app.put('/books/volumes/:isbn', (request, response, next) => {
         })
         .then(res => {
             const book = res.body.items[0].volumeInfo;
-            console.log('frogs');
             return client.query(`
                 INSERT INTO books (title, author, isbn, image_url, description)
                 VALUES ($1, $2, $3, $4, $5)
